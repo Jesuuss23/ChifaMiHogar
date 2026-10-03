@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Http;
 
 class OrderCheckoutController extends Controller
 {
- public function checkout()
+    public function checkout()
     {
         $settings = Setting::all()->pluck('value', 'key');
 
@@ -26,26 +26,36 @@ class OrderCheckoutController extends Controller
         $freeKm       = floatval($settings['free_delivery_km'] ?? 3.0);
         $extraKmFee   = floatval($settings['extra_km_fee'] ?? 2.00);
 
+        // Validaciones para el bloqueo de local cerrado y link de comunidad
+        $storeOpen            = ($settings['store_open'] ?? '1') == '1';
+        $whatsappCommunityUrl = $settings['whatsapp_community_url'] ?? '#';
+
         return view('client.checkout', compact(
             'paymentPhone', 'paymentName', 'yapeQr', 
-            'kitchenLat', 'kitchenLng', 'freeKm', 'extraKmFee'
+            'kitchenLat', 'kitchenLng', 'freeKm', 'extraKmFee',
+            'storeOpen', 'whatsappCommunityUrl'
         ));
     }
 
-public function process(Request $request)
+    public function process(Request $request)
     {
+        $storeOpen = Setting::where('key', 'store_open')->value('value') ?? '1';
+        if ($storeOpen != '1') {
+            return redirect()->route('home')->with('store_closed', true);
+        }
+
         $validated = $request->validate([
-            'customer_name' => 'required|string|max:100',
-            'customer_phone' => 'required|string|max:20',
+            'customer_name'    => 'required|string|max:100',
+            'customer_phone'   => 'required|string|max:20',
             'delivery_address' => 'required|string|max:255',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
-            'reference' => 'nullable|string|max:255',
-            'notes' => 'nullable|string|max:500',
-            'cart_data' => 'required|string',
-            'payment_method' => 'required|in:yape,cash',
-            'cash_amount' => 'nullable|string|max:50',
-            'delivery_fee' => 'required|numeric|min:0',
+            'latitude'         => 'nullable|numeric',
+            'longitude'        => 'nullable|numeric',
+            'reference'        => 'nullable|string|max:255',
+            'notes'            => 'nullable|string|max:500',
+            'cart_data'        => 'required|string',
+            'payment_method'   => 'required|in:yape,cash',
+            'cash_amount'      => 'nullable|string|max:50',
+            'delivery_fee'     => 'required|numeric|min:0',
         ]);
 
         $cart = json_decode($validated['cart_data'], true);
@@ -66,33 +76,33 @@ public function process(Request $request)
 
         // 1. Crear el Pedido en Base de Datos
         $order = Order::create([
-            'order_code' => $orderCode,
-            'customer_name' => $validated['customer_name'],
-            'customer_phone' => $validated['customer_phone'],
+            'order_code'       => $orderCode,
+            'customer_name'    => $validated['customer_name'],
+            'customer_phone'   => $validated['customer_phone'],
             'delivery_address' => $validated['delivery_address'],
-            'latitude' => $request->filled('latitude') ? $request->latitude : null,
-            'longitude' => $request->filled('longitude') ? $request->longitude : null,
-            'reference' => $validated['reference'] ?? null,
-            'subtotal' => $subtotal,
-            'delivery_fee' => $deliveryFee,
-            'total' => $total,
-            'payment_method' => $validated['payment_method'],
-            'cash_amount' => $validated['payment_method'] === 'cash' ? ($validated['cash_amount'] ?? 'Monto exacto') : null,
-            'payment_status' => 'pending',
-            'order_status' => 'received',
-            'payment_receipt' => null,
-            'notes' => $validated['notes'] ?? null,
+            'latitude'         => $request->filled('latitude') ? $request->latitude : null,
+            'longitude'        => $request->filled('longitude') ? $request->longitude : null,
+            'reference'        => $validated['reference'] ?? null,
+            'subtotal'         => $subtotal,
+            'delivery_fee'     => $deliveryFee,
+            'total'            => $total,
+            'payment_method'   => $validated['payment_method'],
+            'cash_amount'      => $validated['payment_method'] === 'cash' ? ($validated['cash_amount'] ?? 'Monto exacto') : null,
+            'payment_status'   => 'pending',
+            'order_status'     => 'received',
+            'payment_receipt'  => null,
+            'notes'            => $validated['notes'] ?? null,
         ]);
 
         // 2. Guardar los platos del pedido
         $orderItemsText = "";
         foreach ($cart as $item) {
             OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $item['id'],
-                'quantity' => $item['quantity'],
-                'unit_price' => $item['price'],
-                'subtotal' => $item['total_item_price'],
+                'order_id'        => $order->id,
+                'product_id'      => $item['id'],
+                'quantity'        => $item['quantity'],
+                'unit_price'      => $item['price'],
+                'subtotal'        => $item['total_item_price'],
                 'selected_addons' => $item['addons'] ?? [],
             ]);
 
@@ -104,7 +114,7 @@ public function process(Request $request)
             $orderItemsText .= "• {$item['quantity']}x {$item['name']}{$addonsList}\n";
         }
 
-// 3. Notificación Instantánea a Telegram (Cocina) con HTML a prueba de fallos
+        // 3. Notificación Instantánea a Telegram (Cocina)
         try {
             $token = env('TELEGRAM_BOT_TOKEN') ?? '8869605276:AAGIALhIvze6eoLmRyvmtcIJIcdGb4q5MZY';
             $chatId = env('TELEGRAM_CHAT_ID') ?? '-1004483383054';
@@ -114,7 +124,7 @@ public function process(Request $request)
                     ? "💵 Efectivo (Paga con: " . htmlspecialchars($order->cash_amount ?? 'Monto exacto') . ")" 
                     : "📱 Yape / Plin";
 
-                // Armado del mensaje en formato HTML (nunca se rompe con caracteres raros)
+                // Armado del mensaje en formato HTML
                 $msg = "🚨 <b>¡NUEVO PEDIDO RECIBIDO!</b> 🚨\n\n";
                 $msg .= "<b>Código:</b> #" . htmlspecialchars($order->order_code) . "\n";
                 $msg .= "<b>Cliente:</b> " . htmlspecialchars($order->customer_name) . "\n";
@@ -133,27 +143,28 @@ public function process(Request $request)
                 $msg .= "<b>TOTAL:</b> S/ " . number_format($order->total, 2) . "\n";
                 $msg .= "<b>Método de Pago:</b> {$paymentInfo}\n";
 
-                // Botones interactivos
+                // Limpieza de formato para enlace de WhatsApp del cliente
+                $cleanPhone = preg_replace('/[^0-9]/', '', $order->customer_phone);
+                $waPhone = (str_starts_with($cleanPhone, '51') && strlen($cleanPhone) === 11) ? $cleanPhone : '51' . $cleanPhone;
+
                 $inlineKeyboard = [
                     [
-                        ['text' => '📲 Abrir WhatsApp Cliente', 'url' => "https://wa.me/51{$order->customer_phone}"]
+                        ['text' => '📲 Abrir WhatsApp Cliente', 'url' => "https://wa.me/{$waPhone}"]
                     ]
                 ];
 
-                // Si se registraron coordenadas GPS, agregar botón para el motorizado
                 if ($order->latitude && $order->longitude) {
                     $inlineKeyboard[] = [
                         ['text' => '🛵 Ver Ruta en Maps (GPS)', 'url' => "https://www.google.com/maps/dir/?api=1&destination={$order->latitude},{$order->longitude}"]
                     ];
                 }
 
-                // Petición POST a Telegram
-                $response = Http::withoutVerifying() // Evita problemas de certificado SSL local en Windows
+                $response = Http::withoutVerifying()
                     ->timeout(6)
                     ->post("https://api.telegram.org/bot{$token}/sendMessage", [
-                        'chat_id' => $chatId,
-                        'text' => $msg,
-                        'parse_mode' => 'HTML',
+                        'chat_id'      => $chatId,
+                        'text'         => $msg,
+                        'parse_mode'   => 'HTML',
                         'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
                     ]);
 
@@ -169,10 +180,10 @@ public function process(Request $request)
     }
 
     public function success($orderCode)
-        {
-            $order = Order::with('items.product')->where('order_code', $orderCode)->firstOrFail();
-            $whatsappNumber = Setting::where('key', 'whatsapp_number')->value('value') ?? '51987654321';
+    {
+        $order = Order::with('items.product')->where('order_code', $orderCode)->firstOrFail();
+        $whatsappNumber = Setting::where('key', 'whatsapp_number')->value('value') ?? '51987654321';
 
-            return view('client.success', compact('order', 'whatsappNumber'));
-        }
+        return view('client.success', compact('order', 'whatsappNumber'));
+    }
 }

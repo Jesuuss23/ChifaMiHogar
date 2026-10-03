@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Client\HomeController;
 use App\Http\Controllers\Client\OrderCheckoutController;
+use App\Http\Controllers\Admin\DashboardController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -17,9 +18,9 @@ Route::post('/checkout', [OrderCheckoutController::class, 'process'])->name('ord
 Route::get('/pedido-confirmado/{orderCode}', [OrderCheckoutController::class, 'success'])->name('order.success');
 
 // Redirección del dashboard de Breeze
-Route::get('/dashboard', function () {
-    return redirect()->route('admin.products.index');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 // Perfil Breeze
 Route::middleware('auth')->group(function () {

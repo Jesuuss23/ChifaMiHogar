@@ -1,12 +1,19 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex justify-between items-center">
+<x-slot name="header">
+        <div class="flex justify-between items-center flex-wrap gap-2">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 {{ __('Bandeja de Pedidos') }}
             </h2>
-            <button onclick="location.reload()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-3 py-1.5 rounded-lg border flex items-center gap-1 transition">
-                🔄 Actualizar Pedidos
-            </button>
+            <div class="flex items-center gap-2">
+                <!-- Botón Instalar App (Solo aparece si el navegador lo permite y no está instalada aún) -->
+                <button id="btn-install-pwa" type="button" class="hidden text-xs bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded-lg shadow flex items-center gap-1.5 transition active:scale-95">
+                    <span>📲</span> Instalar App en Celular
+                </button>
+
+                <button onclick="location.reload()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-3 py-1.5 rounded-lg border flex items-center gap-1 transition">
+                    🔄 Actualizar Pedidos
+                </button>
+            </div>
         </div>
     </x-slot>
 
@@ -142,38 +149,35 @@
                                                 </select>
                                             </form>
                                         </td>
-                                        <!-- Dirección -->
-                                        <td class="py-4 px-4 max-w-xs">
-                                            <p class="text-xs text-gray-800 font-medium leading-relaxed">{{ $order->delivery_address }}</p>
-                                            
-                                            @if($order->reference)
-                                                <p class="text-[11px] text-gray-500 mt-1 italic">Ref: {{ $order->reference }}</p>
-                                            @endif
-
-                                            @if($order->notes)
-                                                <div class="mt-2 bg-amber-50 text-amber-800 p-2 rounded text-[11px] border border-amber-200">
-                                                    <strong>Nota cocina:</strong> {{ $order->notes }}
-                                                </div>
-                                            @endif
-
-                                            <!-- Botón directo por Coordenadas (Sin búsqueda de texto) -->
-                                            @if(!empty($order->latitude) && !empty($order->longitude))
-                                                <div class="mt-2.5">
-                                                    <a href="https://www.google.com/maps/dir/?api=1&destination={{ trim($order->latitude) }},{{ trim($order->longitude) }}" 
+                                        <!-- Columna de Delivery / Motorizado -->
+                                        <td class="px-4 py-3 text-right">
+                                            @if($order->latitude && $order->longitude)
+                                                @if($order->order_status === 'delivered')
+                                                    <!-- Estado Entregado: Botón secundario/informativo -->
+                                                    <a href="https://www.google.com/maps/dir/?api=1&destination={{ $order->latitude }},{{ $order->longitude }}" 
                                                     target="_blank" 
-                                                    class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow transition">
-                                                        <span>📍 Iniciar Entrega (GPS)</span>
+                                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 border border-gray-300 text-xs font-semibold transition">
+                                                        <span>📍</span> Ver Ubicación (Entregado)
                                                     </a>
-                                                    <span class="block text-[10px] text-gray-400 mt-0.5">
-                                                        Coords: {{ number_format($order->latitude, 5) }}, {{ number_format($order->longitude, 5) }}
+                                                @elseif($order->order_status === 'cancelled')
+                                                    <!-- Estado Cancelado -->
+                                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-100 text-gray-400 text-xs font-medium">
+                                                        Pedido cancelado
                                                     </span>
+                                                @else
+                                                    <!-- Estados Activos (Recibido, En Cocina, En Camino): Botón de Acción -->
+                                                    <a href="https://www.google.com/maps/dir/?api=1&destination={{ $order->latitude }},{{ $order->longitude }}" 
+                                                    target="_blank" 
+                                                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition">
+                                                        <span>📍</span> Iniciar Entrega (GPS)
+                                                    </a>
+                                                @endif
+
+                                                <div class="text-[10px] text-gray-400 mt-1 font-mono">
+                                                    Coords: {{ number_format($order->latitude, 5) }}, {{ number_format($order->longitude, 5) }}
                                                 </div>
                                             @else
-                                                <div class="mt-2">
-                                                    <span class="inline-block bg-gray-100 text-gray-500 text-[10px] font-semibold px-2 py-1 rounded">
-                                                        ⚠️ Sin GPS (Ubicación manual)
-                                                    </span>
-                                                </div>
+                                                <span class="text-xs text-gray-400 italic">Sin GPS</span>
                                             @endif
                                         </td>
                                 @empty
@@ -216,5 +220,38 @@
         function closeModal() {
             document.getElementById('voucher-modal').classList.add('hidden');
         }
+    </script>
+    <script>
+        let deferredPrompt;
+        const installBtn = document.getElementById('btn-install-pwa');
+
+        // Captura el evento del navegador cuando la web está lista para ser instalada
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Mostramos el botón en el panel admin
+            if (installBtn) {
+                installBtn.classList.remove('hidden');
+            }
+        });
+
+        if (installBtn) {
+            installBtn.addEventListener('click', async () => {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    installBtn.classList.add('hidden');
+                }
+                deferredPrompt = null;
+            });
+        }
+
+        // Si ya está abierta como app instalada, ocultamos el botón
+        window.addEventListener('appinstalled', () => {
+            if (installBtn) {
+                installBtn.classList.add('hidden');
+            }
+        });
     </script>
 </x-app-layout>

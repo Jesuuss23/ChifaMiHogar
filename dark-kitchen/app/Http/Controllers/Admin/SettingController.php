@@ -18,20 +18,22 @@ class SettingController extends Controller
     public function update(Request $request)
     {
         $validated = $request->validate([
-            'payment_phone' => 'required|string|max:20',
-            'payment_name' => 'required|string|max:100',
-            'whatsapp_number' => 'required|string|max:20',
-            'kitchen_lat' => 'required|numeric',
-            'kitchen_lng' => 'required|numeric',
-            'free_delivery_km' => 'required|numeric|min:0',
-            'extra_km_fee' => 'required|numeric|min:0',
-            'store_open' => 'nullable|boolean',
-            'yape_qr' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'payment_phone'           => 'required|string|max:20',
+            'payment_name'            => 'required|string|max:100',
+            'whatsapp_number'         => 'required|string|max:20',
+            'whatsapp_community_url'  => 'nullable|string|max:255',
+            'kitchen_lat'             => 'required|numeric',
+            'kitchen_lng'             => 'required|numeric',
+            'free_delivery_km'        => 'required|numeric|min:0',
+            'extra_km_fee'            => 'required|numeric|min:0',
+            'store_open'              => 'nullable|boolean',
+            'yape_qr'                 => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
         Setting::updateOrCreate(['key' => 'payment_phone'], ['value' => $validated['payment_phone']]);
         Setting::updateOrCreate(['key' => 'payment_name'], ['value' => $validated['payment_name']]);
         Setting::updateOrCreate(['key' => 'whatsapp_number'], ['value' => $validated['whatsapp_number']]);
+        Setting::updateOrCreate(['key' => 'whatsapp_community_url'], ['value' => $validated['whatsapp_community_url'] ?? '']);
         Setting::updateOrCreate(['key' => 'kitchen_lat'], ['value' => $validated['kitchen_lat']]);
         Setting::updateOrCreate(['key' => 'kitchen_lng'], ['value' => $validated['kitchen_lng']]);
         Setting::updateOrCreate(['key' => 'free_delivery_km'], ['value' => $validated['free_delivery_km']]);

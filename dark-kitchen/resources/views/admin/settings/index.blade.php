@@ -83,6 +83,14 @@
                                     💡 Tip: Abre Google Maps en tu computadora, haz clic derecho sobre tu cocina/local y copia los dos números de coordenadas (ej: -12.0125, -77.0012).
                                 </p>
                             </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Enlace de la Comunidad / Grupo de WhatsApp</label>
+                                <input type="url" name="whatsapp_community_url" 
+                                    value="{{ old('whatsapp_community_url', $settings['whatsapp_community_url'] ?? 'https://chat.whatsapp.com/tu-codigo') }}" 
+                                    placeholder="https://chat.whatsapp.com/..." 
+                                    class="w-full border-gray-300 rounded-lg text-sm">
+                                <span class="text-[11px] text-gray-400">Este enlace se mostrará al cliente cuando el local esté cerrado para que se una al grupo.</span>
+                            </div>
                         </div>
                     </div>
 

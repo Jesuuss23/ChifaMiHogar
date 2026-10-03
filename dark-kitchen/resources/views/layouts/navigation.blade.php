@@ -6,7 +6,17 @@
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}">
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
+                        <!-- Logo Chifa Mi Hogar -->
+                        <div class="shrink-0 flex items-center gap-2.5">
+                            <a href="{{ route('dashboard') }}" class="flex items-center gap-2">
+                                <img src="{{ asset('images/logo.png') }}" 
+                                    alt="Logo Chifa Mi Hogar" 
+                                    class="block h-10 w-auto rounded-lg object-contain bg-neutral-900 p-1">
+                                <span class="font-extrabold text-base tracking-tight text-gray-900 hidden sm:inline-block">
+                                    Chifa <span class="text-red-600">Mi Hogar</span>
+                                </span>
+                            </a>
+                        </div>
                     </a>
                 </div>
 
