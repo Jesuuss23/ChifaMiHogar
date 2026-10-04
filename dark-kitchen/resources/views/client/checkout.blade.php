@@ -169,10 +169,16 @@
                         </div>
 
                         <div id="wallet-options" class="hidden mt-3 pt-2 border-t border-purple-200">
-                            <p class="text-[11px] text-emerald-700 font-bold mb-1.5">¡Copiado! Abre tu aplicación:</p>
+                            <p class="text-[11px] text-emerald-700 font-bold mb-2">¡Número copiado! Abre tu aplicación:</p>
                             <div class="grid grid-cols-2 gap-2">
-                                <a href="yape://" class="bg-[#742284] text-white py-2 rounded-xl text-xs font-bold shadow">🟣 Abrir Yape</a>
-                                <a href="intent://#Intent;package=com.interbank.mobilebanking;scheme=plin;end;" onclick="tryOpenPlin(event)" class="bg-[#00d2c4] text-neutral-900 py-2 rounded-xl text-xs font-black shadow">🟢 Abrir Plin</a>
+                                <button type="button" onclick="launchApp('yape')" 
+                                        class="bg-[#742284] hover:bg-[#5f1b6c] text-white py-2.5 px-2 rounded-xl text-xs font-bold shadow flex items-center justify-center gap-1 active:scale-95 transition">
+                                    <span>🟣</span> Abrir Yape
+                                </button>
+                                <button type="button" onclick="launchApp('plin')" 
+                                        class="bg-[#00d2c4] hover:bg-[#00baa9] text-neutral-900 py-2.5 px-2 rounded-xl text-xs font-black shadow flex items-center justify-center gap-1 active:scale-95 transition">
+                                    <span>🟢</span> Abrir Plin
+                                </button>
                             </div>
                         </div>
 
@@ -292,24 +298,36 @@
             }, 1500);
         }
 
-        function selectPaymentMethod(method) {
-            const labelYape = document.getElementById('label-yape');
-            const labelCash = document.getElementById('label-cash');
-            const sectionYape = document.getElementById('section-yape');
-            const sectionCash = document.getElementById('section-cash');
+        function launchApp(app) {
+            const isAndroid = /Android/i.test(navigator.userAgent);
+            const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-            if (method === 'yape') {
-                labelYape.className = "cursor-pointer border-2 border-purple-500 bg-purple-50 rounded-2xl p-3.5 flex flex-col items-center gap-1.5 text-center shadow-md shadow-purple-200/60 transition";
-                labelCash.className = "cursor-pointer border border-stone-300 bg-white hover:border-stone-400 rounded-2xl p-3.5 flex flex-col items-center gap-1.5 text-center transition";
-                sectionYape.classList.remove('hidden');
-                sectionCash.classList.add('hidden');
-                document.querySelector('input[name="payment_method"][value="yape"]').checked = true;
-            } else {
-                labelCash.className = "cursor-pointer border-2 border-emerald-500 bg-emerald-50 rounded-2xl p-3.5 flex flex-col items-center gap-1.5 text-center shadow-md shadow-emerald-200/60 transition";
-                labelYape.className = "cursor-pointer border border-stone-300 bg-white hover:border-stone-400 rounded-2xl p-3.5 flex flex-col items-center gap-1.5 text-center transition";
-                sectionCash.classList.remove('hidden');
-                sectionYape.classList.add('hidden');
-                document.querySelector('input[name="payment_method"][value="cash"]').checked = true;
+            if (app === 'yape') {
+                if (isAndroid) {
+                    // Intent oficial con fallback automático a la Play Store si no abre
+                    window.location.href = "intent://#Intent;scheme=yape;package=com.bcp.innovacxion.yapeapp;S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.bcp.innovacxion.yapeapp;end";
+                } else if (isIOS) {
+                    // URL scheme para iOS
+                    window.location.href = "yape://";
+                    setTimeout(() => {
+                        // Fallback a App Store si no la tiene o no abre
+                        window.location.href = "https://apps.apple.com/pe/app/yape/id1133502844";
+                    }, 2000);
+                } else {
+                    alert("Estás en una computadora. Escanea el código QR o transfiere desde tu celular al número copiado.");
+                }
+            } else if (app === 'plin') {
+                if (isAndroid) {
+                    // Intent corregido con el package oficial de Interbank y fallback a Play Store
+                    window.location.href = "intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=pe.com.interbank.interbankapp;S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dpe.com.interbank.interbankapp;end";
+                } else if (isIOS) {
+                    window.location.href = "interbankapp://";
+                    setTimeout(() => {
+                        window.location.href = "https://apps.apple.com/pe/app/interbank-app/id449830573";
+                    }, 2000);
+                } else {
+                    alert("Abre la app de tu banco (Interbank, BBVA o Scotiabank) y transfiere al número copiado.");
+                }
             }
         }
 
