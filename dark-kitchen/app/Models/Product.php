@@ -16,11 +16,22 @@ class Product extends Model
         'description',
         'price',
         'image',
+        'category_id',
+        'is_featured',
         'is_active',
     ];
 
     public function addons(): HasMany
     {
         return $this->hasMany(ProductAddon::class);
+    }
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
     }
 }

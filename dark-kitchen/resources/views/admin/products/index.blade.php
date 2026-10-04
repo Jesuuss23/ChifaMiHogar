@@ -7,6 +7,9 @@
             <a href="{{ route('admin.products.create') }}" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow text-sm">
                 + Nuevo Plato
             </a>
+            <a href="{{ route('admin.categories.index') }}" class="text-xs font-bold text-stone-700 hover:text-red-700 flex items-center gap-2 py-2 px-3 rounded-xl transition">
+                <span>📂</span> Categorías
+            </a>
         </div>
     </x-slot>
 

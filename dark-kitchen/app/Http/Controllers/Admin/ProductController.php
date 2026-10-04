@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -12,25 +13,27 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::with('addons')->latest()->paginate(10);
+        $products = Product::with(['addons', 'category'])->latest()->paginate(10);
         return view('admin.products.index', compact('products'));
     }
 
     public function create()
     {
-        return view('admin.products.create');
+        $categories = Category::where('is_active', true)->orderBy('sort_order', 'asc')->get();
+        return view('admin.products.create', compact('categories'));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'addons' => 'nullable|array',
-            'addons.*.name' => 'required_with:addons|string|max:255',
-            'addons.*.price' => 'required_with:addons|numeric|min:0',
+            'name'           => 'required|string|max:255',
+            'price'          => 'required|numeric|min:0',
+            'description'    => 'nullable|string',
+            'image'          => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'category_id'    => 'nullable|exists:categories,id',
+            'addons'         => 'nullable|array',
+            'addons.*.name'  => 'nullable|string|max:255',
+            'addons.*.price' => 'nullable|numeric|min:0',
         ]);
 
         $imagePath = null;
@@ -39,20 +42,22 @@ class ProductController extends Controller
         }
 
         $product = Product::create([
-            'name' => $validated['name'],
-            'slug' => Str::slug($validated['name']) . '-' . rand(100, 999),
+            'name'        => $validated['name'],
+            'slug'        => Str::slug($validated['name']) . '-' . rand(100, 999),
             'description' => $validated['description'] ?? null,
-            'price' => $validated['price'],
-            'image' => $imagePath,
-            'is_active' => true,
+            'price'       => $validated['price'],
+            'image'       => $imagePath,
+            'category_id' => $validated['category_id'] ?? null,
+            'is_featured' => $request->has('is_featured'),
+            'is_active'   => true,
         ]);
 
-        // Guardar adicionales si se enviaron
-        if (!empty($validated['addons'])) {
-            foreach ($validated['addons'] as $addonData) {
+        // Guardar adicionales solo si tienen nombre escrito
+        if (!empty($request->addons)) {
+            foreach ($request->addons as $addonData) {
                 if (!empty($addonData['name'])) {
                     $product->addons()->create([
-                        'name' => $addonData['name'],
+                        'name'  => $addonData['name'],
                         'price' => $addonData['price'] ?? 0,
                     ]);
                 }
@@ -65,17 +70,21 @@ class ProductController extends Controller
     public function edit(Product $product)
     {
         $product->load('addons');
-        return view('admin.products.edit', compact('product'));
+        $categories = Category::where('is_active', true)->orderBy('sort_order', 'asc')->get();
+        return view('admin.products.edit', compact('product', 'categories'));
     }
 
     public function update(Request $request, Product $product)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'is_active' => 'boolean',
+            'name'           => 'required|string|max:255',
+            'price'          => 'required|numeric|min:0',
+            'description'    => 'nullable|string',
+            'image'          => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'category_id'    => 'nullable|exists:categories,id',
+            'addons'         => 'nullable|array',
+            'addons.*.name'  => 'nullable|string|max:255',
+            'addons.*.price' => 'nullable|numeric|min:0',
         ]);
 
         if ($request->hasFile('image')) {
@@ -86,11 +95,26 @@ class ProductController extends Controller
         }
 
         $product->update([
-            'name' => $validated['name'],
+            'name'        => $validated['name'],
             'description' => $validated['description'] ?? null,
-            'price' => $validated['price'],
-            'is_active' => $request->has('is_active'),
+            'price'       => $validated['price'],
+            'category_id' => $validated['category_id'] ?? null,
+            'is_featured' => $request->has('is_featured'),
+            'is_active'   => $request->has('is_active'),
         ]);
+
+        // Sincronizar o recrear adicionales
+        if ($request->has('addons')) {
+            $product->addons()->delete();
+            foreach ($validated['addons'] as $addonData) {
+                if (!empty($addonData['name'])) {
+                    $product->addons()->create([
+                        'name'  => $addonData['name'],
+                        'price' => $addonData['price'] ?? 0,
+                    ]);
+                }
+            }
+        }
 
         return redirect()->route('admin.products.index')->with('success', 'Plato actualizado.');
     }

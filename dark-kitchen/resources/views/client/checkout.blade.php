@@ -93,17 +93,33 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-stone-700 mb-1.5">Dirección Exacta (Calle, Av, Número, Dpto) *</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="delivery_address" name="delivery_address" required placeholder="Ej: Av. Las Flores 345"
-                               class="w-full bg-stone-50 border-stone-300 rounded-xl text-sm text-stone-800 placeholder-stone-400 py-2.5 focus:bg-white focus:ring-red-500 focus:border-red-500">
-
-                        <button type="button" onclick="getLocation()"
-                                class="bg-red-50 hover:bg-red-100 border border-red-300 text-red-700 font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 whitespace-nowrap active:scale-95 transition">
-                            <span>📍</span> Mi Ubicación
-                        </button>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-xs font-semibold text-stone-700">Dirección Exacta (Calle, Av, Número, Dpto) *</label>
+                        <span class="text-[10px] text-amber-700 font-bold bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full">
+                            ⭐ 100% Precisión
+                        </span>
                     </div>
-                    <p id="geo-status" class="text-[11px] text-stone-500 mt-1.5"></p>
+
+                    <div class="flex gap-2 items-stretch">
+                        <input type="text" id="delivery_address" name="delivery_address" required placeholder="Ej: Av. Las Flores 345, Dpto 201"
+                            class="w-full bg-stone-50 border-stone-300 rounded-xl text-sm text-stone-800 placeholder-stone-400 py-2.5 focus:bg-white focus:ring-red-500 focus:border-red-500">
+
+                        <!-- Botón GPS con tooltip/burbuja flotante -->
+                        <div class="relative shrink-0 flex items-center">
+                            <button type="button" onclick="getLocation()"
+                                    class="h-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-red-900/20 active:scale-95 transition">
+                                <span class="text-base">📍</span> Mi Ubicación
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Nota inferior con beneficio directo -->
+                    <p class="text-[11px] text-stone-500 mt-1.5 flex items-center gap-1">
+                        <span class="text-red-600">💡</span> 
+                        <span>Toca <strong>"Mi Ubicación"</strong> para calcular la distancia exacta y que tu chifa llegue caliente sin demoras.</span>
+                    </p>
+                    
+                    <p id="geo-status" class="text-[11px] font-medium text-stone-600 mt-1"></p>
                 </div>
 
                 <div>
@@ -147,14 +163,34 @@
                 </div>
 
                 <!-- Detalle si es YAPE / PLIN -->
-                <div id="section-yape" class="bg-purple-50/70 border border-purple-200 p-4 rounded-2xl text-center">
-                    <div class="relative inline-block mb-3">
-                        @if(!empty($yapeQr))
-                            <img src="{{ $yapeQr }}" alt="QR de Pago" class="w-36 h-36 mx-auto rounded-2xl bg-white p-2 shadow-md border border-purple-200 object-contain">
-                        @else
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ $paymentPhone }}" alt="QR de Pago" class="w-32 h-32 mx-auto rounded-2xl bg-white p-2 shadow-md border border-purple-200">
-                        @endif
-                        <span class="block text-[10px] text-stone-500 mt-1.5">Escanea o haz captura para transferir</span>
+                <div id="section-yape" class="bg-purple-50/70 border border-purple-200 p-5 rounded-2xl text-center">
+                    
+                    <!-- Contenedor del QR más grande -->
+                    <div class="relative inline-block mb-2 group">
+                        @php
+                            $qrUrl = !empty($yapeQr) ? $yapeQr : "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={$paymentPhone}";
+                        @endphp
+                        
+                        <img id="qr-image" src="{{ $qrUrl }}" alt="QR de Pago" 
+                            onclick="openQrModal()"
+                            class="w-48 h-48 mx-auto rounded-2xl bg-white p-3 shadow-lg border-2 border-purple-300 object-contain cursor-pointer active:scale-95 transition">
+                            
+                        <span class="block text-[11px] font-semibold text-purple-700 mt-2">
+                            🔍 Toca el QR para ampliarlo
+                        </span>
+                    </div>
+
+                    <!-- Botones de Acción para el QR -->
+                    <div class="flex items-center justify-center gap-2 mb-4">
+                        <button type="button" onclick="openQrModal()" 
+                                class="bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-300 text-xs font-bold py-2 px-3 rounded-xl transition flex items-center gap-1 active:scale-95">
+                            <span>🔎</span> Ampliar
+                        </button>
+
+                        <button type="button" onclick="downloadQr('{{ $qrUrl }}')" 
+                                class="bg-purple-700 hover:bg-purple-800 text-black text-xs font-bold py-2 px-3 rounded-xl shadow transition flex items-center gap-1 active:scale-95">
+                            <span>📥</span> Guardar QR
+                        </button>
                     </div>
 
                     <div class="border-t border-dashed border-purple-300 pt-3">
@@ -162,28 +198,40 @@
 
                         <div class="flex items-center justify-center gap-2 mt-2">
                             <span id="payment-phone" class="text-2xl font-black tracking-widest text-red-700">{{ $paymentPhone }}</span>
-                            <button type="button" id="btn-copy" onclick="copyNumber()" class="bg-red-700 hover:bg-red-600 text-white text-xs font-black px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1 active:scale-95">
+                            <button type="button" id="btn-copy" onclick="copyNumber()" class="bg-red-700 hover:bg-red-600 text-white text-xs font-black px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5 active:scale-95">
                                 <span id="copy-icon">📋</span>
                                 <span id="copy-text">Copiar</span>
                             </button>
                         </div>
 
-                        <div id="wallet-options" class="hidden mt-3 pt-2 border-t border-purple-200">
-                            <p class="text-[11px] text-emerald-700 font-bold mb-2">¡Número copiado! Abre tu aplicación:</p>
-                            <div class="grid grid-cols-2 gap-2">
-                                <button type="button" onclick="launchApp('yape')" 
-                                        class="bg-[#742284] hover:bg-[#5f1b6c] text-white py-2.5 px-2 rounded-xl text-xs font-bold shadow flex items-center justify-center gap-1 active:scale-95 transition">
-                                    <span>🟣</span> Abrir Yape
-                                </button>
-                                <button type="button" onclick="launchApp('plin')" 
-                                        class="bg-[#00d2c4] hover:bg-[#00baa9] text-neutral-900 py-2.5 px-2 rounded-xl text-xs font-black shadow flex items-center justify-center gap-1 active:scale-95 transition">
-                                    <span>🟢</span> Abrir Plin
-                                </button>
-                            </div>
+                        <div class="mt-4 p-3 bg-purple-100/70 rounded-xl border border-purple-200 text-xs text-purple-950 text-left space-y-1">
+                            <p class="font-bold flex items-center gap-1.5">💡 ¿Cómo pagar fácil?</p>
+                            <p>1. <strong>Copia el número</strong> o <strong>guarda el QR</strong>.</p>
+                            <p>2. Abre tu <strong>Yape</strong> o <strong>Plin</strong> y realiza el pago.</p>
+                            <p>3. Confirma abajo y reenvíanos la captura por WhatsApp.</p>
                         </div>
+                    </div>
+                </div>
 
-                        <div class="mt-3 p-2.5 bg-purple-100/70 rounded-xl border border-purple-200 text-[11px] text-purple-900">
-                            ℹ️ <em>Al confirmar, te abriremos WhatsApp para que solo nos reenvíes la captura de tu Yape.</em>
+                <!-- Modal para ver el QR en Pantalla Completa -->
+                <div id="qr-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-4">
+                    <div class="bg-white p-5 rounded-3xl max-w-xs w-full text-center relative shadow-2xl animate-fade-in">
+                        <button type="button" onclick="closeQrModal()" class="absolute top-3 right-3 text-stone-400 hover:text-stone-700 text-xl font-black w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center">
+                            ✕
+                        </button>
+                        
+                        <p class="font-['Playfair_Display',serif] font-bold text-lg text-purple-900 mb-1">Escanear QR</p>
+                        <p class="text-[11px] text-stone-500 mb-3">Puedes tomar captura ahora o guardarlo</p>
+                        
+                        <img src="{{ $qrUrl }}" alt="QR Ampliado" class="w-64 h-64 mx-auto rounded-2xl border border-purple-200 p-2 shadow-inner bg-stone-50 object-contain">
+
+                        <div class="mt-4 flex gap-2">
+                            <button type="button" onclick="downloadQr('{{ $qrUrl }}')" class="flex-1 bg-purple-700 hover:bg-purple-800 text-black text-xs font-bold py-2.5 rounded-xl shadow">
+                                📥 Guardar Imagen
+                            </button>
+                            <button type="button" onclick="closeQrModal()" class="flex-1 bg-stone-200 hover:bg-stone-300 text-stone-800 text-xs font-bold py-2.5 rounded-xl">
+                                Cerrar
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -298,36 +346,24 @@
             }, 1500);
         }
 
-        function launchApp(app) {
-            const isAndroid = /Android/i.test(navigator.userAgent);
-            const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        function selectPaymentMethod(method) {
+            const labelYape = document.getElementById('label-yape');
+            const labelCash = document.getElementById('label-cash');
+            const sectionYape = document.getElementById('section-yape');
+            const sectionCash = document.getElementById('section-cash');
 
-            if (app === 'yape') {
-                if (isAndroid) {
-                    // Intent oficial con fallback automático a la Play Store si no abre
-                    window.location.href = "intent://#Intent;scheme=yape;package=com.bcp.innovacxion.yapeapp;S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.bcp.innovacxion.yapeapp;end";
-                } else if (isIOS) {
-                    // URL scheme para iOS
-                    window.location.href = "yape://";
-                    setTimeout(() => {
-                        // Fallback a App Store si no la tiene o no abre
-                        window.location.href = "https://apps.apple.com/pe/app/yape/id1133502844";
-                    }, 2000);
-                } else {
-                    alert("Estás en una computadora. Escanea el código QR o transfiere desde tu celular al número copiado.");
-                }
-            } else if (app === 'plin') {
-                if (isAndroid) {
-                    // Intent corregido con el package oficial de Interbank y fallback a Play Store
-                    window.location.href = "intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=pe.com.interbank.interbankapp;S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dpe.com.interbank.interbankapp;end";
-                } else if (isIOS) {
-                    window.location.href = "interbankapp://";
-                    setTimeout(() => {
-                        window.location.href = "https://apps.apple.com/pe/app/interbank-app/id449830573";
-                    }, 2000);
-                } else {
-                    alert("Abre la app de tu banco (Interbank, BBVA o Scotiabank) y transfiere al número copiado.");
-                }
+            if (method === 'yape') {
+                labelYape.className = "cursor-pointer border-2 border-purple-500 bg-purple-50 rounded-2xl p-3.5 flex flex-col items-center gap-1.5 text-center shadow-md shadow-purple-200/60 transition";
+                labelCash.className = "cursor-pointer border border-stone-300 bg-white hover:border-stone-400 rounded-2xl p-3.5 flex flex-col items-center gap-1.5 text-center transition";
+                sectionYape.classList.remove('hidden');
+                sectionCash.classList.add('hidden');
+                document.querySelector('input[name="payment_method"][value="yape"]').checked = true;
+            } else {
+                labelCash.className = "cursor-pointer border-2 border-emerald-500 bg-emerald-50 rounded-2xl p-3.5 flex flex-col items-center gap-1.5 text-center shadow-md shadow-emerald-200/60 transition";
+                labelYape.className = "cursor-pointer border border-stone-300 bg-white hover:border-stone-400 rounded-2xl p-3.5 flex flex-col items-center gap-1.5 text-center transition";
+                sectionCash.classList.remove('hidden');
+                sectionYape.classList.add('hidden');
+                document.querySelector('input[name="payment_method"][value="cash"]').checked = true;
             }
         }
 
@@ -418,6 +454,37 @@
             feeDisplay.textContent = currentDeliveryFee.toFixed(2);
             feeInput.value = currentDeliveryFee.toFixed(2);
             totalDisplay.textContent = (subtotal + currentDeliveryFee).toFixed(2);
+        }
+
+        // Abrir modal de QR ampliado
+        function openQrModal() {
+            document.getElementById('qr-modal').classList.remove('hidden');
+        }
+
+        // Cerrar modal
+        function closeQrModal() {
+            document.getElementById('qr-modal').classList.add('hidden');
+        }
+
+        // Descargar el QR al carrete/fotos del celular
+        async function downloadQr(url) {
+            try {
+                const res = await fetch(url);
+                const blob = await res.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = "QR-Pago-ChifaMiHogar.png";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(blobUrl);
+
+                alert("¡QR guardado en tu galería de fotos!");
+            } catch (e) {
+                // Fallback si la imagen viene de otro dominio restringido
+                window.open(url, '_blank');
+            }
         }
     </script>
 </body>

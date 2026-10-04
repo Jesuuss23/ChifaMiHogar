@@ -7,7 +7,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Client\HomeController;
 use App\Http\Controllers\Client\OrderCheckoutController;
 use App\Http\Controllers\Admin\DashboardController;
-
+use App\Http\Controllers\Admin\CategoryController;
 use Illuminate\Support\Facades\Route;
 
 // Rutas Públicas (Clientes)
@@ -36,6 +36,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
     Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
     Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
+    Route::resource('categories', CategoryController::class)->except(['create', 'show', 'edit']);
 });
 
 require __DIR__.'/auth.php';
